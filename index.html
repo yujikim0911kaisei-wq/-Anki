@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>一問一答</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Helvetica Neue",Arial,sans-serif;background:#f5f5f5;color:#222}
+.container{max-width:900px;margin:0 auto;padding:20px}
+h1{text-align:center;margin-top:5px;margin-bottom:20px}
+#inputScreen{display:block}
+.description{background:white;padding:15px;border-radius:10px;margin-bottom:15px;line-height:1.6}
+.table-wrapper{overflow-x:auto;background:white;border-radius:10px}
+table{width:100%;border-collapse:collapse;min-width:500px}
+th,td{border:1px solid #ccc;padding:8px}
+th{background:#eee;text-align:center}
+td{background:white}
+td[contenteditable="true"]{min-height:35px;outline:none}
+td[contenteditable="true"]:focus{background:#fffde7}
+.number-cell{width:100px}
+.background-setting{background:white;border-radius:10px;padding:15px;margin-top:15px}
+.background-setting h3{margin-top:0;margin-bottom:10px}
+.background-setting input{width:100%;font-size:16px}
+#backgroundPreview{display:none;width:100%;max-height:250px;object-fit:contain;margin-top:12px;border-radius:10px;border:1px solid #ccc}
+.remove-background{background:#ddd;color:#222;margin-top:10px;display:none}
+.button-area{display:flex;justify-content:center;gap:10px;flex-wrap:wrap;margin-top:20px}
+button{border:none;border-radius:10px;padding:14px 22px;font-size:17px;cursor:pointer;touch-action:manipulation}
+button:active{transform:scale(.97)}
+.start-button{background:#1976d2;color:white;font-weight:bold;font-size:20px;padding:16px 40px}
+.add-button{background:#555;color:white}.clear-button{background:#ddd;color:#222}
+#quizScreen{display:none;position:fixed;inset:0;width:100%;height:100%;overflow-y:auto;background-color:#f5f5f5;background-position:center;background-repeat:no-repeat;background-size:cover;background-attachment:fixed}
+#quizScreen::before{content:"";position:fixed;inset:0;background:rgba(0,0,0,.15);pointer-events:none;z-index:0}
+#quizScreen>.quiz-content{position:relative;z-index:1;max-width:900px;margin:0 auto;padding:80px 20px 20px}
+.back-to-input-quiz{position:fixed;top:15px;right:15px;z-index:10;background:rgba(255,255,255,.93);color:#333;border:1px solid #ccc;border-radius:10px;padding:10px 15px;font-size:15px;box-shadow:0 2px 6px rgba(0,0,0,.15)}
+.quiz-number{text-align:center;font-size:20px;margin-bottom:20px;color:#555;background:rgba(255,255,255,.9);border-radius:10px;padding:8px 15px;width:fit-content;margin-left:auto;margin-right:auto}
+.question-box{background:rgba(255,255,255,.93);border-radius:15px;min-height:250px;padding:30px 20px;display:flex;align-items:center;justify-content:center;text-align:center;font-size:28px;line-height:1.6;box-shadow:0 2px 8px rgba(0,0,0,.15);word-break:break-word}
+.answer-box{background:rgba(255,255,255,.93);border-radius:15px;padding:25px 20px;margin-top:20px;text-align:center;font-size:28px;line-height:1.5;display:none;word-break:break-word;box-shadow:0 2px 8px rgba(0,0,0,.15)}
+.know-button{background:#2e7d32;color:white;font-size:22px;min-width:180px}
+.show-answer-button{background:#1976d2;color:white;font-size:20px;display:none}
+.correct-button{background:#2e7d32;color:white;font-size:20px;min-width:130px}
+.wrong-button{background:#c62828;color:white;font-size:20px;min-width:130px}
+.next-buttons{display:flex;justify-content:center;gap:15px;margin-top:20px;flex-wrap:wrap}
+#resultScreen{display:none}
+.result-box{background:white;border-radius:15px;padding:25px;text-align:center}
+.result-box h2{margin-top:0}
+.wrong-list{font-size:25px;line-height:1.8;margin:20px 0;word-break:break-word}
+.no-wrong{font-size:22px;color:#2e7d32;margin:20px}
+.back-button{background:#555;color:white}
+@media(max-width:600px){
+.container{padding:12px}
+#quizScreen>.quiz-content{padding:75px 12px 20px}
+.back-to-input-quiz{top:10px;right:10px;font-size:14px;padding:9px 12px}
+.question-box{font-size:23px;min-height:220px;padding:25px 15px}
+.answer-box{font-size:23px}
+button{font-size:16px;padding:13px 18px}
+}
+</style>
+</head>
+<body>
+<div class="container">
+<div id="inputScreen">
+<h1>一問一答</h1>
+<div class="description">A列に<strong>問題番号</strong>、B列に<strong>問題文</strong>、C列に<strong>答え</strong>を入力してください。<br>ExcelやGoogleスプレッドシートから、表をそのままコピーして貼り付けることもできます。</div>
+<div class="table-wrapper"><table id="questionTable"><thead><tr><th>問題番号</th><th>問題文</th><th>答え</th></tr></thead><tbody id="tableBody"><tr><td class="number-cell" contenteditable="true"></td><td contenteditable="true"></td><td contenteditable="true"></td></tr></tbody></table></div>
+<div class="background-setting"><h3>一問一答の背景画像</h3><p>一問一答中に表示する画像を選択してください。</p><input type="file" id="backgroundInput" accept="image/*"><img id="backgroundPreview" alt="背景画像プレビュー"><button id="removeBackgroundButton" class="remove-background" onclick="removeBackground()">背景画像を削除</button></div>
+<div class="button-area"><button class="add-button" onclick="addRow()">＋ 行を追加</button><button class="clear-button" onclick="clearTable()">表をクリア</button></div>
+<div class="button-area"><button class="start-button" onclick="startQuiz()">一問一答</button></div>
+</div>
+<div id="quizScreen">
+<button class="back-to-input-quiz" onclick="backToInputFromQuiz()">← 入力画面に戻る</button>
+<div class="quiz-content">
+<div class="quiz-number" id="quizNumber">1問目</div>
+<div class="question-box" id="questionBox"></div>
+<div class="answer-box" id="answerBox"></div>
+<div class="button-area"><button id="knowButton" class="know-button" onclick="knowAnswer()">わかった</button><button id="showAnswerButton" class="show-answer-button" onclick="showAnswer()">答えを出す</button></div>
+<div id="resultButtons" class="next-buttons" style="display:none;"><button class="correct-button" onclick="markCorrect()">正解</button><button class="wrong-button" onclick="markWrong()">誤答</button></div>
+</div>
+</div>
+<div id="resultScreen"><div class="result-box"><h2>終了！</h2><p>誤答した問題の問題番号</p><div id="wrongList" class="wrong-list"></div><div class="button-area"><button class="back-button" onclick="backToInput()">入力画面に戻る</button></div></div></div>
+</div>
+<script>
+let questions=[],quizOrder=[],currentIndex=0,wrongQuestions=[],typingTimer=null,autoAnswerTimer=null,questionText="",questionPosition=0,backgroundImageURL=null;
+document.getElementById("backgroundInput").addEventListener("change",function(event){const file=event.target.files[0];if(!file)return;const reader=new FileReader();reader.onload=function(e){backgroundImageURL=e.target.result;const preview=document.getElementById("backgroundPreview");preview.src=backgroundImageURL;preview.style.display="block";document.getElementById("removeBackgroundButton").style.display="inline-block"};reader.readAsDataURL(file)});
+function removeBackground(){backgroundImageURL=null;document.getElementById("backgroundInput").value="";document.getElementById("backgroundPreview").src="";document.getElementById("backgroundPreview").style.display="none";document.getElementById("removeBackgroundButton").style.display="none"}
+function addRow(){const tbody=document.getElementById("tableBody"),tr=document.createElement("tr");tr.innerHTML='<td class="number-cell" contenteditable="true"></td><td contenteditable="true"></td><td contenteditable="true"></td>';tbody.appendChild(tr)}
+function clearTable(){if(!confirm("入力した問題をすべて消しますか？"))return;document.getElementById("tableBody").innerHTML='<tr><td class="number-cell" contenteditable="true"></td><td contenteditable="true"></td><td contenteditable="true"></td></tr>'}
+document.getElementById("tableBody").addEventListener("paste",function(event){const text=(event.clipboardData||window.clipboardData).getData("text");if(!text.includes("\t")&&!text.includes("\n"))return;event.preventDefault();const rows=text.replace(/\r/g,"").split("\n").filter(row=>row.trim()!=="");const tbody=document.getElementById("tableBody");tbody.innerHTML="";rows.forEach(rowText=>{const columns=rowText.split("\t"),tr=document.createElement("tr");for(let i=0;i<3;i++){const td=document.createElement("td");if(i===0)td.className="number-cell";td.contentEditable="true";td.textContent=columns[i]!==undefined?columns[i]:"";tr.appendChild(td)}tbody.appendChild(tr)})});
+function loadQuestions(){const rows=document.querySelectorAll("#tableBody tr"),result=[];rows.forEach(row=>{const cells=row.querySelectorAll("td");if(cells.length<3)return;const number=cells[0].innerText.trim(),question=cells[1].innerText.trim(),answer=cells[2].innerText.trim();if(number!==""&&question!==""&&answer!=="")result.push({number,question,answer})});return result}
+function startQuiz(){questions=loadQuestions();if(questions.length===0){alert("問題がありません。\n問題番号・問題文・答えを入力してください。");return}quizOrder=[...questions];shuffle(quizOrder);currentIndex=0;wrongQuestions=[];const quizScreen=document.getElementById("quizScreen");quizScreen.style.backgroundImage=backgroundImageURL?`url("${backgroundImageURL}")`:"none";document.getElementById("inputScreen").style.display="none";document.getElementById("resultScreen").style.display="none";document.getElementById("quizScreen").style.display="block";showQuestion()}
+function shuffle(array){for(let i=array.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[array[i],array[j]]=[array[j],array[i]]}}
+function showQuestion(){clearTimers();const current=quizOrder[currentIndex];document.getElementById("quizNumber").textContent=`${currentIndex+1} / ${quizOrder.length} 問目`;const questionBox=document.getElementById("questionBox"),answerBox=document.getElementById("answerBox");questionBox.textContent="";answerBox.textContent=current.answer;answerBox.style.display="none";document.getElementById("knowButton").style.display="inline-block";document.getElementById("showAnswerButton").style.display="none";document.getElementById("resultButtons").style.display="none";questionText=current.question;questionPosition=0;typingTimer=setInterval(()=>{if(questionPosition>=questionText.length){clearInterval(typingTimer);typingTimer=null;return}questionBox.textContent+=questionText.charAt(questionPosition);questionPosition++},100)}
+function knowAnswer(){if(typingTimer!==null){clearInterval(typingTimer);typingTimer=null}document.getElementById("knowButton").style.display="none";document.getElementById("showAnswerButton").style.display="inline-block";autoAnswerTimer=setTimeout(()=>{showAnswer()},3000)}
+function showAnswer(){clearTimers();document.getElementById("questionBox").textContent=quizOrder[currentIndex].question;document.getElementById("answerBox").style.display="block";document.getElementById("showAnswerButton").style.display="none";document.getElementById("knowButton").style.display="none";document.getElementById("resultButtons").style.display="flex"}
+function markCorrect(){nextQuestion()}
+function markWrong(){wrongQuestions.push(quizOrder[currentIndex].number);nextQuestion()}
+function nextQuestion(){clearTimers();currentIndex++;if(currentIndex>=quizOrder.length){showResult();return}showQuestion()}
+function showResult(){clearTimers();document.getElementById("quizScreen").style.display="none";document.getElementById("resultScreen").style.display="block";const list=document.getElementById("wrongList");if(wrongQuestions.length===0){list.innerHTML='<div class="no-wrong">全問正解！</div>';return}list.innerHTML=wrongQuestions.map(number=>escapeHTML(String(number))).join("、")}
+function backToInputFromQuiz(){if(!confirm("一問一答を終了して入力画面に戻りますか？"))return;clearTimers();document.getElementById("quizScreen").style.display="none";document.getElementById("resultScreen").style.display="none";document.getElementById("inputScreen").style.display="block"}
+function backToInput(){clearTimers();document.getElementById("resultScreen").style.display="none";document.getElementById("quizScreen").style.display="none";document.getElementById("inputScreen").style.display="block"}
+function clearTimers(){if(typingTimer!==null){clearInterval(typingTimer);typingTimer=null}if(autoAnswerTimer!==null){clearTimeout(autoAnswerTimer);autoAnswerTimer=null}}
+function escapeHTML(text){const div=document.createElement("div");div.textContent=text;return div.innerHTML}
+</script>
+</body>
+</html>
